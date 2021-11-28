@@ -11,32 +11,32 @@
 
 void remoteCallback(const geometry_msgs::Twist &msg){
 	if(msg.linear.x == 2){
-		kanu_rpm1 = 40;
+		kanu_rpm1 = 70; //150
 		kanu_dir1 = true;
-                kanu_rpm2 = 40;
+    kanu_rpm2 = 70; //150
 		kanu_dir2 = false;
 	}
 	else if(msg.linear.x == -2){
-		kanu_rpm1 = 40;
+		kanu_rpm1 = 70;  //150
 		kanu_dir1 = false;
-                kanu_rpm2 = 40;
+    kanu_rpm2 = 70;  //150
 		kanu_dir2 = true;
 	}
 	else if(msg.angular.z == 2){
-		kanu_rpm1 = 30;
+		kanu_rpm1 = 70;
 		kanu_dir1 = true;
-                kanu_rpm2 = 30;
+    kanu_rpm2 = 70;
 		kanu_dir2 = true;
 	}
 	else if(msg.angular.z == -2){
-		kanu_rpm1 = 30;
+		kanu_rpm1 = 70;
 		kanu_dir1 = false;
-                kanu_rpm2 = 30;
+    kanu_rpm2 = 70;
 		kanu_dir2 = false;
 	}
 	else{
 		kanu_rpm1 = 0;
-                kanu_rpm2 = 0;
+    kanu_rpm2 = 0;
 	}
 }
 
@@ -45,49 +45,49 @@ void motorCallback(const robot_msgs::motor_msgs &msg){
 		con_switch = 0;
 		kanu_rpm1 = msg.rpm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+    kanu_rpm2 = msg.rpm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "emergemcy"){
 		con_switch = 1;
 		kanu_rpm1 = 0;
 		kanu_dir1 = true;
-                kanu_rpm2 = 0;
+    kanu_rpm2 = 0;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "stop"){
 		con_switch = 0;
 		kanu_rpm1 = 0;
 		kanu_dir1 = true;
-                kanu_rpm2 = 0;
+    kanu_rpm2 = 0;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "curve"){
 		con_switch = 0;
 		kanu_rpm1 = msg.rpm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+    kanu_rpm2 = msg.rpm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "turn_l"){
 		con_switch = 1;
 		kanu_rpm1 = msg.rpm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+    kanu_rpm2 = msg.rpm2;
 		kanu_dir2 = true;
 	}
 	else if(msg.mode == "turn_r"){
 		con_switch = 1;
 		kanu_rpm1 = msg.rpm1;
 		kanu_dir1 = false;
-                kanu_rpm2 = msg.rpm2;
+    kanu_rpm2 = msg.rpm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "back"){
 		con_switch = 0;
 		kanu_rpm1 = msg.rpm1;
 		kanu_dir1 = false;
-                kanu_rpm2 = msg.rpm2;
+    kanu_rpm2 = msg.rpm2;
 		kanu_dir2 = true;
 	}
 }
@@ -173,26 +173,26 @@ void Interrupt_Setting(void)
 }
 void Interrupt1A(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
 {
-  if(gpio_read(pinum, motor1_DIR) == true)EncoderCounter1A ++;
-  else EncoderCounter1A --;
+  if(gpio_read(pinum, motor1_DIR) == true)EncoderCounter1A --;
+  else EncoderCounter1A ++;
   EncoderSpeedCounter1 ++;
 }
 void Interrupt1B(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
 {
-  if(gpio_read(pinum, motor1_DIR) == true)EncoderCounter1B ++;
-  else EncoderCounter1B --;
+  if(gpio_read(pinum, motor1_DIR) == true)EncoderCounter1B --;
+  else EncoderCounter1B ++;
   EncoderSpeedCounter1 ++;
 }
 void Interrupt2A(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
 {
-  if(gpio_read(pinum, motor2_DIR) == true)EncoderCounter2A --;
-  else EncoderCounter2A ++;
+  if(gpio_read(pinum, motor2_DIR) == true)EncoderCounter2A ++;
+  else EncoderCounter2A --;
   EncoderSpeedCounter2 ++;
 }
 void Interrupt2B(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
 {
-  if(gpio_read(pinum, motor2_DIR) == true)EncoderCounter2B --;
-  else EncoderCounter2B ++;
+  if(gpio_read(pinum, motor2_DIR) == true)EncoderCounter2B ++;
+  else EncoderCounter2B --;
   EncoderSpeedCounter2 ++;
 }
 int Motor1_Encoder_Sum()
@@ -227,6 +227,8 @@ void Initialize(void)
 
   switch_direction = true;
   Theta_Distance_Flag = 0;
+
+  DistancePerCount = Wheel_round / (Encoder_resolution * 4); // 4ch
 
   ROS_INFO("PWM_range %d", PWM_range);
   ROS_INFO("PWM_frequency %d", PWM_frequency);
@@ -479,10 +481,11 @@ void Motor_View()
 	printf("\033[1;1H");
 	printf("Encoder1A : %5d  ||  Encoder2A : %5d\n", EncoderCounter1A, EncoderCounter2A);
 	printf("Encoder1B : %5d  ||  Encoder2B : %5d\n", EncoderCounter1B, EncoderCounter2B);
-	printf("RPM1 : %10.0f    ||  RPM2 : %10.0f\n", RPM_Value1, RPM_Value2);
+	printf("RPM1 : %10.0f   ||  RPM2 : %10.0f\n", RPM_Value1, RPM_Value2);
 	printf("PWM1 : %10d   ||  PWM2 : %10d\n", current_PWM1, current_PWM2);
 	printf("DIR1 : %10d   ||  DIR2 : %10d\n", current_Direction1, current_Direction2);
 	printf("Acc  : %10d\n", acceleration);
+    printf("x : %5.2fcm, y : %5.2fcm, th : %ddeg\n", x, y, (int)(th*180/PI));
 	printf("\n");
 }
 
@@ -509,12 +512,12 @@ void RPM_Controller(int motor_num, bool direction, int desired_rpm)
 
   if(direction == local_current_direction)
   {
-    if(desired_rpm > local_current_rpm)
+    if(desired_rpm - 2 > local_current_rpm)
     {
       local_PWM = local_current_PWM + acceleration;
       Motor_Controller(motor_num, direction, local_PWM);
     }
-    else if(desired_rpm < local_current_rpm)
+    else if(desired_rpm + 2 < local_current_rpm)
     {
       local_PWM = local_current_PWM - acceleration;
       Motor_Controller(motor_num, direction, local_PWM);
@@ -545,6 +548,37 @@ void RPM_Controller(int motor_num, bool direction, int desired_rpm)
   }
 }
 
+void Wheel_cal()
+{
+  current_time = ros::Time::now();
+  Motor1_Encoder_Sum();
+  Motor2_Encoder_Sum();
+  dRight = EncoderCounter1 - prev_EncoderCounter1;
+  dLeft = EncoderCounter2 - prev_EncoderCounter2;
+
+  dt = (current_time - last_time).toSec();
+
+  //v_left = dLeft * DistancePerCount/dt;
+  //v_right = dRight * DistancePerCount/dt;
+
+  delta_distance = 0.5f * (double)(dLeft+dRight) * DistancePerCount;
+  delta_th = (double)(dRight-dLeft)*DistancePerCount/(2*Robot_radius);
+
+
+  delta_x = delta_distance*(double)cos(th);
+  delta_y = delta_distance*(double)sin(th);
+
+  x += delta_x;
+  y += delta_y;
+  th += delta_th;
+
+
+  prev_EncoderCounter1 = EncoderCounter1;
+  prev_EncoderCounter2 = EncoderCounter2;
+
+  last_time = current_time;
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "motor_node");
@@ -556,8 +590,14 @@ int main(int argc, char** argv)
 
   while(ros::ok())
   {
-    Distance_Go(100, 100);
+    //Motor_Controller(1, false, 70);
+    //Motor_Controller(2, false, 70);
+    Motor_Controller(1, kanu_dir1, kanu_rpm1);
+    Motor_Controller(2, kanu_dir2, kanu_rpm2);
+
+    Wheel_cal();
     Motor_View();
+
     ros::spinOnce();
     loop_rate.sleep();
   }

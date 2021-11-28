@@ -1,7 +1,7 @@
 #ifndef MOTOR_NODE_H
 #define MOTOR_NODE_H
 #include <pigpiod_if2.h>
-
+#include <ros/ros.h>
 #define motor1_DIR 19
 #define motor1_PWM 26
 #define motor1_ENA 23
@@ -15,12 +15,37 @@
 #define PI 3.141592
 
 //User_Controller
+float Kp_1 = 0.84;
+float Ki_1 = 0.32;
+float Kd_1 = 0.1;
+float Kp_2 = 0.84;
+float Ki_2 = 0.28;
+float Kd_2 = 0.1;
 int con_switch = 0;
-int kanu_rpm1 = 0;
+double kanu_rpm1 = 0.0;
 bool kanu_dir1 = true;
-int kanu_rpm2 = 0;
+double kanu_rpm2 = 0.0;
 bool kanu_dir2 = false;
+double rpm_err_1 = 0.0;
+double rpm_err_2 = 0.0;
+double rpm_err_k_1 = 0.0;
+double rpm_err_k_2 = 0.0;
+double rpm_derr_1 = 0.0;
+double rpm_derr_2 = 0.0;
+double rpm_err_sum_1 = 0.0;
+double rpm_err_sum_2 = 0.0;
+double ctrl_up_1 = 0.0;
+double ctrl_ui_1 = 0.0;
+double ctrl_ud_1 = 0.0;
+double ctrl_up_2 = 0.0;
+double ctrl_ui_2 = 0.0;
+double ctrl_ud_2 = 0.0;
+int ctrl_u_1 = 0;
+int ctrl_u_2 = 0;
+int ipwm_u_1 = 0;
+int ipwm_u_2 = 0;
 void RPM_Controller(int motor_num, bool direction, int desired_rpm);
+void PID_Controller(int motor_num, bool direction, int desired_rpm);
 
 //Text_Input
 void Text_Input(void);
@@ -82,5 +107,18 @@ double RPM_Value1;
 double RPM_Value2;
 void RPM_Calculator();
 void Motor_View();
+
+//Whell
+ros::Time current_time, last_time;
+
+void Wheel_cal();
+double x, y, th;
+double v_left, v_right, vth;
+double dLeft, dRight, dt;
+double delta_distance, delta_th, delta_x, delta_y;
+int prev_EncoderCounter1 = 0; 
+int prev_EncoderCounter2 = 0;
+// int EncoderCounter1
+double DistancePerCount;
 
 #endif // MOTOR_NODE_H

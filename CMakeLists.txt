@@ -23,3 +23,7 @@ target_link_libraries(motor_node ${catkin_LIBRARIES} pigpiod_if2)
 add_executable(test_node src/test.cpp)
 add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_node ${catkin_LIBRARIES} pigpiod_if2)
+
+add_executable(encoder_node src/encoder.cpp)
+add_dependencies(encoder_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(encoder_node ${catkin_LIBRARIES} pigpiod_if2)

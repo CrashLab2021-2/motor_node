@@ -7,7 +7,9 @@
 #include <motor_test/motor_node.h>
 #include <fstream>
 #include "geometry_msgs/Twist.h"
+#include "std_msgs/Float64.h"
 #include "kanu_msgs/motor_msgs.h"
+#include "kanu_msgs/pid_msgs.h"
 
 void remoteCallback(const geometry_msgs::Twist &msg){
 	if(msg.linear.x == 2){
@@ -43,9 +45,9 @@ void remoteCallback(const geometry_msgs::Twist &msg){
 void motorCallback(const kanu_msgs::motor_msgs &msg){
 	if(msg.mode == "go"){
 		con_switch = 0;
-		kanu_rpm1 = msg.rpm1;
+		kanu_rpm1 = msg.pwm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+                kanu_rpm2 = msg.pwm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "emergency"){
@@ -64,31 +66,44 @@ void motorCallback(const kanu_msgs::motor_msgs &msg){
 	}
 	else if(msg.mode == "curve"){
 		con_switch = 0;
-		kanu_rpm1 = msg.rpm1;
+		kanu_rpm1 = msg.pwm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+                kanu_rpm2 = msg.pwm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "turn_l"){
 		con_switch = 1;
-		kanu_rpm1 = msg.rpm1;
+		kanu_rpm1 = msg.pwm1;
 		kanu_dir1 = true;
-                kanu_rpm2 = msg.rpm2;
+                kanu_rpm2 = msg.pwm2;
 		kanu_dir2 = true;
 	}
 	else if(msg.mode == "turn_r"){
 		con_switch = 1;
-		kanu_rpm1 = msg.rpm1;
+		kanu_rpm1 = msg.pwm1;
 		kanu_dir1 = false;
-                kanu_rpm2 = msg.rpm2;
+                kanu_rpm2 = msg.pwm2;
 		kanu_dir2 = false;
 	}
 	else if(msg.mode == "back"){
 		con_switch = 0;
-		kanu_rpm1 = msg.rpm1;
+		kanu_rpm1 = msg.pwm1;
 		kanu_dir1 = false;
-                kanu_rpm2 = msg.rpm2;
+                kanu_rpm2 = msg.pwm2;
 		kanu_dir2 = true;
+	}
+}
+
+void pidCallback(const kanu_msgs::pid_msgs &msg){
+	if(msg.num == 1){
+		Kp_1 = msg.p;
+		Ki_1 = msg.i;
+		Kd_1 = msg.d;
+	}
+	else if(msg.num == 2){
+		Kp_2 = msg.p;
+		Ki_2 = msg.i;
+		Kd_2 = msg.d;
 	}
 }
 
@@ -479,9 +494,12 @@ void Motor_View()
 	printf("\033[1;1H");
 	printf("Encoder1A : %5d  ||  Encoder2A : %5d\n", EncoderCounter1A, EncoderCounter2A);
 	printf("Encoder1B : %5d  ||  Encoder2B : %5d\n", EncoderCounter1B, EncoderCounter2B);
-	printf("RPM1 : %10.0f    ||  RPM2 : %10.0f\n", RPM_Value1, RPM_Value2);
+	printf("RPM1 : %10.2f    ||  RPM2 : %10.2f\n", RPM_Value1, RPM_Value2);
 	printf("PWM1 : %10.0d    ||  PWM2 : %10.0d\n", current_PWM1, current_PWM2);
 	printf("DIR1 :%10.0d     ||  DIR2 :%10.0d\n", current_Direction1, current_Direction2);
+	printf("P1 : %10.2f    ||  P2 : %10.2f\n", Kp_1, Kp_2);
+	printf("I1 : %10.2f    ||  I2 : %10.2f\n", Ki_1, Ki_2);
+	printf("D1 : %10.2f    ||  D2 : %10.2f\n", Kd_1, Kd_2);
 	printf("Acc  :%10.0d\n", acceleration);
 	printf("\n");
 }
@@ -545,27 +563,141 @@ void RPM_Controller(int motor_num, bool direction, int desired_rpm)
   }
 }
 
+void PID_Controller(int motor_num, bool direction, int desired_rpm)
+{
+  bool local_current_direction;
+  int local_rpm;
+  int local_PWM;
+  int local_current_rpm;
+  int local_current_PWM;
+
+  if(motor_num == 1)
+  {
+    local_current_direction = current_Direction1;
+    local_current_rpm = RPM_Value1;
+    local_current_PWM = current_PWM1;
+    if(direction == local_current_direction)
+    {
+      rpm_err_1 = desired_rpm - local_current_rpm;
+      rpm_derr_1 = rpm_err_1 - rpm_err_k_1;
+      rpm_err_sum_1 = rpm_err_sum_1 + rpm_err_1;
+
+      rpm_err_k_1 = rpm_err_1;
+
+      ctrl_up_1 = Kp_1 * rpm_err_1;
+      ctrl_ui_1 = Ki_1 * rpm_err_sum_1;
+      ctrl_ud_1 = Kd_1 * rpm_derr_1;
+      ctrl_u_1 = (int)(ctrl_up_1 + ctrl_ui_1 + ctrl_ud_1);
+      
+      if(ctrl_u_1 > 250) ipwm_u_1 = 250;
+      else ipwm_u_1 = (int)ctrl_u_1;
+      
+      Motor_Controller(motor_num, local_current_direction, ipwm_u_1);
+    }
+    else
+    {
+      if(desired_rpm >= 0)
+      {
+        local_PWM = local_current_PWM - acceleration;
+        if(local_PWM <= 0)
+        {
+          local_PWM = 0;
+          Motor_Controller(motor_num, direction, local_PWM);
+        }
+        else Motor_Controller(motor_num, local_current_direction, local_PWM);
+      }
+      else
+      {
+        local_PWM = local_current_PWM;
+        Motor_Controller(motor_num, direction, local_PWM);
+      }
+    }
+  }
+  else if(motor_num == 2)
+  {
+    local_current_direction = current_Direction2;
+    local_current_rpm = RPM_Value2;
+    local_current_PWM = current_PWM2;
+    if(direction == local_current_direction)
+    {
+      rpm_err_2 = desired_rpm - local_current_rpm;
+      rpm_derr_2 = rpm_err_2 - rpm_err_k_2;
+      rpm_err_sum_2 = rpm_err_sum_2 + rpm_err_2;
+
+      rpm_err_k_2 = rpm_err_2;
+
+      ctrl_up_2 = Kp_2 * rpm_err_2;
+      ctrl_ui_2 = Ki_2 * rpm_err_sum_2;
+      ctrl_ud_2 = Kd_2 * rpm_derr_2;
+      ctrl_u_2 = (int)(ctrl_up_2 + ctrl_ui_2 + ctrl_ud_2);
+      
+      if(ctrl_u_2 > 250) ipwm_u_2 = 250;
+      else ipwm_u_2 = (int)ctrl_u_2;
+      
+      Motor_Controller(motor_num, local_current_direction, ipwm_u_2);
+    }
+    else
+    {
+      if(desired_rpm >= 0)
+      {
+        local_PWM = local_current_PWM - acceleration;
+        if(local_PWM <= 0)
+        {
+          local_PWM = 0;
+          Motor_Controller(motor_num, direction, local_PWM);
+        }
+        else Motor_Controller(motor_num, local_current_direction, local_PWM);
+      }
+      else
+      {
+        local_PWM = local_current_PWM;
+        Motor_Controller(motor_num, direction, local_PWM);
+      }
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "motor_node");
   ros::NodeHandle nh;
   ros::Subscriber remote_sub = nh.subscribe("/turtle1/cmd_vel", 1, remoteCallback);
   ros::Subscriber motor_sub = nh.subscribe("/motor_topic", 1, motorCallback);
+  ros::Subscriber pid_sub = nh.subscribe("/pid_topic", 1, pidCallback);
+  ros::Publisher current1_pub = nh.advertise<std_msgs::Float64>("/current1",1);
+  ros::Publisher set1_pub = nh.advertise<std_msgs::Float64>("/set1",1);
+  ros::Publisher current2_pub = nh.advertise<std_msgs::Float64>("/current2",1);
+  ros::Publisher set2_pub = nh.advertise<std_msgs::Float64>("/set2",1);
   Initialize();
   ros::Rate loop_rate(Control_cycle);
-
+  ros::Time past_time;
   while(ros::ok())
   {
+    past_time = ros::Time::now();
     if(con_switch == 0){
-      RPM_Controller(1, kanu_dir1, kanu_rpm1);
-      RPM_Controller(2, kanu_dir2, kanu_rpm2);
+      Motor_Controller(1, kanu_dir1, kanu_rpm1);
+      Motor_Controller(2, kanu_dir2, kanu_rpm2);
     }
     else if(con_switch == 1){
       Motor_Controller(1, kanu_dir1, kanu_rpm1);
       Motor_Controller(2, kanu_dir2, kanu_rpm2);
     }
+    std_msgs::Float64 rpm1;
+    std_msgs::Float64 set_rpm1;
+    rpm1.data = RPM_Value1;
+    set_rpm1.data = kanu_rpm1;
+    current1_pub.publish(rpm1);
+    set1_pub.publish(set_rpm1);
+    std_msgs::Float64 rpm2;
+    std_msgs::Float64 set_rpm2;
+    rpm2.data = RPM_Value2;
+    set_rpm2.data = kanu_rpm2;
+    current2_pub.publish(rpm2);
+    set2_pub.publish(set_rpm2);
+    
     Motor_View();
     ros::spinOnce();
+    std::cout<<(ros::Time::now() - past_time).toSec()<<std::endl;
     loop_rate.sleep();
   }
   Motor_Controller(1, true, 0);
