@@ -43,55 +43,22 @@ void remoteCallback(const geometry_msgs::Twist &msg){
 }
 
 void motorCallback(const kanu_msgs::motor_msgs &msg){
-	if(msg.mode == "go"){
-		con_switch = 0;
-		kanu_rpm1 = msg.pwm1;
-		kanu_dir1 = true;
-                kanu_rpm2 = msg.pwm2;
-		kanu_dir2 = false;
-	}
-	else if(msg.mode == "emergency"){
-		con_switch = 1;
-		kanu_rpm1 = 0;
-		kanu_dir1 = true;
-                kanu_rpm2 = 0;
-		kanu_dir2 = false;
-	}
-	else if(msg.mode == "stop"){
-		con_switch = 0;
-		kanu_rpm1 = 0;
-		kanu_dir1 = true;
-                kanu_rpm2 = 0;
-		kanu_dir2 = false;
-	}
-	else if(msg.mode == "curve"){
-		con_switch = 0;
-		kanu_rpm1 = msg.pwm1;
-		kanu_dir1 = true;
-                kanu_rpm2 = msg.pwm2;
-		kanu_dir2 = false;
-	}
-	else if(msg.mode == "turn_l"){
-		con_switch = 1;
-		kanu_rpm1 = msg.pwm1;
-		kanu_dir1 = true;
-                kanu_rpm2 = msg.pwm2;
-		kanu_dir2 = true;
-	}
-	else if(msg.mode == "turn_r"){
-		con_switch = 1;
-		kanu_rpm1 = msg.pwm1;
-		kanu_dir1 = false;
-                kanu_rpm2 = msg.pwm2;
-		kanu_dir2 = false;
-	}
-	else if(msg.mode == "back"){
-		con_switch = 0;
-		kanu_rpm1 = msg.pwm1;
-		kanu_dir1 = false;
-                kanu_rpm2 = msg.pwm2;
-		kanu_dir2 = true;
-	}
+	if(msg.pwm1 < 0){
+    kanu_pwm1 = (-1) * msg_pwm1;
+    kanu_dir1 = false;
+  }
+  else{
+    kanu_pwm1 = msg_pwm1;
+    kanu_dir1 = true;
+  }
+  if(msg.pwm2 < 0){
+    kanu_pwm2 = (-1) * msg_pwm2;
+    kanu_dir2 = false;
+  }
+  else{
+    kanu_pwm2 = msg_pwm2;
+    kanu_dir2 = true;
+  }
 }
 
 void pidCallback(const kanu_msgs::pid_msgs &msg){
@@ -663,41 +630,17 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
   ros::Subscriber remote_sub = nh.subscribe("/turtle1/cmd_vel", 1, remoteCallback);
   ros::Subscriber motor_sub = nh.subscribe("/motor_topic", 1, motorCallback);
-  ros::Subscriber pid_sub = nh.subscribe("/pid_topic", 1, pidCallback);
-  ros::Publisher current1_pub = nh.advertise<std_msgs::Float64>("/current1",1);
-  ros::Publisher set1_pub = nh.advertise<std_msgs::Float64>("/set1",1);
-  ros::Publisher current2_pub = nh.advertise<std_msgs::Float64>("/current2",1);
-  ros::Publisher set2_pub = nh.advertise<std_msgs::Float64>("/set2",1);
-  Initialize();
+  ros::Subscriber pid_sub = nh.subscribe("/pid_topic", 1, pidCallback);;
+
   ros::Rate loop_rate(Control_cycle);
-  ros::Time past_time;
+  
   while(ros::ok())
   {
-    past_time = ros::Time::now();
-    if(con_switch == 0){
-      Motor_Controller(1, kanu_dir1, kanu_rpm1);
-      Motor_Controller(2, kanu_dir2, kanu_rpm2);
-    }
-    else if(con_switch == 1){
-      Motor_Controller(1, kanu_dir1, kanu_rpm1);
-      Motor_Controller(2, kanu_dir2, kanu_rpm2);
-    }
-    std_msgs::Float64 rpm1;
-    std_msgs::Float64 set_rpm1;
-    rpm1.data = RPM_Value1;
-    set_rpm1.data = kanu_rpm1;
-    current1_pub.publish(rpm1);
-    set1_pub.publish(set_rpm1);
-    std_msgs::Float64 rpm2;
-    std_msgs::Float64 set_rpm2;
-    rpm2.data = RPM_Value2;
-    set_rpm2.data = kanu_rpm2;
-    current2_pub.publish(rpm2);
-    set2_pub.publish(set_rpm2);
+    Motor_Controller(1, kanu_dir1, kanu_pwm1);
+    Motor_Controller(2, kanu_dir2, kanu_pwm2);
     
     Motor_View();
     ros::spinOnce();
-    std::cout<<(ros::Time::now() - past_time).toSec()<<std::endl;
     loop_rate.sleep();
   }
   Motor_Controller(1, true, 0);
