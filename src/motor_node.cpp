@@ -628,6 +628,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "motor_node");
   ros::NodeHandle nh;
+  Initialize();
   ros::Subscriber remote_sub = nh.subscribe("/turtle1/cmd_vel", 1, remoteCallback);
   ros::Subscriber motor_sub = nh.subscribe("/motor_topic", 1, motorCallback);
   ros::Subscriber pid_sub = nh.subscribe("/pid_topic", 1, pidCallback);;
