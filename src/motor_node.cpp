@@ -13,50 +13,50 @@
 
 void remoteCallback(const geometry_msgs::Twist &msg){
 	if(msg.linear.x == 2){
-		kanu_rpm1 = 40;
+		kanu_pwm1 = 40;
 		kanu_dir1 = true;
-                kanu_rpm2 = 40;
+                kanu_pwm2 = 40;
 		kanu_dir2 = false;
 	}
 	else if(msg.linear.x == -2){
-		kanu_rpm1 = 40;
+		kanu_pwm1 = 40;
 		kanu_dir1 = false;
-                kanu_rpm2 = 40;
+                kanu_pwm2 = 40;
 		kanu_dir2 = true;
 	}
 	else if(msg.angular.z == 2){
-		kanu_rpm1 = 30;
+		kanu_pwm1 = 30;
 		kanu_dir1 = true;
-                kanu_rpm2 = 30;
+                kanu_pwm2 = 30;
 		kanu_dir2 = true;
 	}
 	else if(msg.angular.z == -2){
-		kanu_rpm1 = 30;
+		kanu_pwm1 = 30;
 		kanu_dir1 = false;
-                kanu_rpm2 = 30;
+                kanu_pwm2 = 30;
 		kanu_dir2 = false;
 	}
 	else{
-		kanu_rpm1 = 0;
-                kanu_rpm2 = 0;
+		kanu_pwm1 = 0;
+                kanu_pwm2 = 0;
 	}
 }
 
 void motorCallback(const kanu_msgs::motor_msgs &msg){
 	if(msg.pwm1 < 0){
-    kanu_pwm1 = (-1) * msg_pwm1;
+    kanu_pwm1 = (-1) * msg.pwm1;
     kanu_dir1 = false;
   }
   else{
-    kanu_pwm1 = msg_pwm1;
+    kanu_pwm1 = msg.pwm1;
     kanu_dir1 = true;
   }
   if(msg.pwm2 < 0){
-    kanu_pwm2 = (-1) * msg_pwm2;
+    kanu_pwm2 = (-1) * msg.pwm2;
     kanu_dir2 = false;
   }
   else{
-    kanu_pwm2 = msg_pwm2;
+    kanu_pwm2 = msg.pwm2;
     kanu_dir2 = true;
   }
 }
